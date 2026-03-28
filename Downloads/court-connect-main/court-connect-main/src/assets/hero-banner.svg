@@ -1,0 +1,8 @@
+<svg width="1920" height="800" viewBox="0 0 1920 800" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="1920" height="800" fill="#f0f9ff"/>
+  <rect width="1920" height="400" fill="#0ea5e9"/>
+  <circle cx="400" cy="300" r="200" fill="#06b6d4" opacity="0.5"/>
+  <circle cx="1500" cy="400" r="250" fill="#10b981" opacity="0.5"/>
+  <text x="960" y="450" font-size="72" font-weight="bold" fill="white" text-anchor="middle" font-family="Arial">QuickCourt</text>
+  <text x="960" y="550" font-size="32" fill="white" text-anchor="middle" font-family="Arial">Book Your Perfect Court</text>
+</svg>
