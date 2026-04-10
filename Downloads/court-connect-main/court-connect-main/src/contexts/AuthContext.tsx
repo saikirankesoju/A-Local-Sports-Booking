@@ -101,8 +101,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       persistUser(response.user);
       return response.user;
     } catch {
-      const normalizedEmail = (email.trim() || `guest-${Date.now()}@quickcourt.local`).toLowerCase();
-      const existingUser = registeredUsers.find(u => u.email.toLowerCase() === normalizedEmail);
+      const normalizedEmail = email.trim().toLowerCase();
+      const existingUser = registeredUsers.find(u => u.email.toLowerCase() === normalizedEmail && u.password === password);
 
       if (existingUser) {
         persistToken(null);
@@ -110,19 +110,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         return existingUser;
       }
 
-      const generatedUser: User = {
-        id: `guest-${Date.now()}`,
-        email: normalizedEmail,
-        fullName: normalizedEmail.split('@')[0] || 'Guest User',
-        role: 'user',
-        avatar: '',
-        password: password || 'quick-access',
-      };
-
+      persistUser(null);
       persistToken(null);
-      persistUsers([...registeredUsers, generatedUser]);
-      persistUser(generatedUser);
-      return generatedUser;
+      return null;
     }
   }, [registeredUsers]);
 
