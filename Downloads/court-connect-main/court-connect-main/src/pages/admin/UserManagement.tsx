@@ -4,20 +4,32 @@ import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { allUsers, bookings } from '@/data/mockData';
 import Navbar from '@/components/Navbar';
 import AdminSidebar from '@/components/AdminSidebar';
 import { Search, Ban, Eye, ShieldCheck } from 'lucide-react';
 import { toast } from 'sonner';
+import { useData } from '@/contexts/DataContext';
 
 const UserManagement = () => {
   const [search, setSearch] = useState('');
   const [roleFilter, setRoleFilter] = useState('all');
+  const [bannedUsers, setBannedUsers] = useState<Set<string>>(new Set());
+  const { users, bookings } = useData();
 
-  const filtered = allUsers.filter(u => {
+  const handleViewUser = (userName: string) => {
+    toast.info(`Viewing profile for ${userName}`);
+  };
+
+  const handleBanUser = (userId: string, userName: string) => {
+    setBannedUsers(prev => new Set(prev).add(userId));
+    toast.success(`${userName} has been banned`);
+  };
+
+  const filtered = users.filter(u => {
     const matchSearch = u.fullName.toLowerCase().includes(search.toLowerCase()) || u.email.toLowerCase().includes(search.toLowerCase());
     const matchRole = roleFilter === 'all' || u.role === roleFilter;
-    return matchSearch && matchRole;
+    const notBanned = !bannedUsers.has(u.id);
+    return matchSearch && matchRole && notBanned;
   });
 
   return (
@@ -62,8 +74,8 @@ const UserManagement = () => {
                     <div className="flex items-center gap-3">
                       <Badge variant="outline" className="capitalize">{u.role}</Badge>
                       <span className="text-sm text-muted-foreground">{userBookings.length} bookings</span>
-                      <Button variant="ghost" size="sm"><Eye className="h-3.5 w-3.5 mr-1" /> View</Button>
-                      <Button variant="ghost" size="sm" className="text-destructive" onClick={() => toast.info('User banned')}>
+                      <Button variant="ghost" size="sm" onClick={() => handleViewUser(u.fullName)}><Eye className="h-3.5 w-3.5 mr-1" /> View</Button>
+                      <Button variant="ghost" size="sm" className="text-destructive" onClick={() => handleBanUser(u.id, u.fullName)}>
                         <Ban className="h-3.5 w-3.5 mr-1" /> Ban
                       </Button>
                     </div>

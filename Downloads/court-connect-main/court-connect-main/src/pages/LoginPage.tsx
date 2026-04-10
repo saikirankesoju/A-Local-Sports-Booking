@@ -7,6 +7,8 @@ import { Label } from '@/components/ui/label';
 import { InputOTP, InputOTPGroup, InputOTPSlot } from '@/components/ui/input-otp';
 import { toast } from 'sonner';
 import { generateOTP, storeOTPSession, verifyOTP } from '@/lib/otp';
+import { Card, CardContent } from '@/components/ui/card';
+import { Eye, EyeOff } from 'lucide-react';
 
 const LoginPage = () => {
   const [email, setEmail] = useState('');
@@ -14,12 +16,30 @@ const LoginPage = () => {
   const [otpSent, setOtpSent] = useState(false);
   const [generatedOtp, setGeneratedOtp] = useState('');
   const [otp, setOtp] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const { login } = useAuth();
   const navigate = useNavigate();
+  
+  // Admin credentials
+  const ADMIN_EMAIL = 'sai@gmail.com';
+  const ADMIN_PASSWORD = 'Admin@1234';
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!email || !password) { toast.error('Please fill in all fields'); return; }
+    
+    // Check for admin login
+    if (email === ADMIN_EMAIL && password === ADMIN_PASSWORD) {
+      const admin = await login(ADMIN_EMAIL, ADMIN_PASSWORD);
+      if (!admin) {
+        toast.error('Invalid admin credentials');
+        return;
+      }
+      toast.success('Admin login successful!');
+      navigate('/admin/dashboard');
+      return;
+    }
+    
     if (!otpSent) {
       const newOtp = generateOTP();
       setGeneratedOtp(newOtp);
@@ -33,9 +53,16 @@ const LoginPage = () => {
       toast.error('Invalid OTP or expired. Please try again.');
       return;
     }
-    login(email, password);
+    const authenticatedUser = await login(email, password);
+    if (!authenticatedUser) {
+      toast.error('Invalid email or password');
+      return;
+    }
     toast.success('Logged in successfully!');
-    navigate('/');
+    
+    if (authenticatedUser.role === 'admin') navigate('/admin/dashboard');
+    else if (authenticatedUser.role === 'owner') navigate('/owner/dashboard');
+    else navigate('/');
   };
 
   return (
@@ -45,21 +72,40 @@ const LoginPage = () => {
           <Link to="/" className="inline-flex items-center gap-2">
             <span className="font-display text-2xl font-bold">QuickCourt</span>
           </Link>
+          <p className="text-muted-foreground mt-2">Login to your account</p>
         </div>
+
         <div className="rounded-xl border bg-card p-8 shadow-card">
           <h1 className="text-2xl font-display font-bold text-center mb-6">
-            {otpSent ? 'Verify OTP' : 'Welcome Back'}
+            {otpSent ? 'Verify OTP' : 'Login'}
           </h1>
           <form onSubmit={handleSubmit} className="space-y-4">
             {!otpSent ? (
               <>
                 <div>
                   <Label htmlFor="email">Email</Label>
-                  <Input id="email" type="email" placeholder="your@email.com" value={email} onChange={e => setEmail(e.target.value)} className="mt-1" />
+                  <Input id="email" type="email" placeholder="sai@gmail.com (admin)" value={email} onChange={e => setEmail(e.target.value)} className="mt-1" />
                 </div>
                 <div>
                   <Label htmlFor="password">Password</Label>
-                  <Input id="password" type="password" placeholder="••••••••" value={password} onChange={e => setPassword(e.target.value)} className="mt-1" />
+                  <div className="relative mt-1">
+                    <Input
+                      id="password"
+                      type={showPassword ? 'text' : 'password'}
+                      placeholder="••••••••"
+                      value={password}
+                      onChange={e => setPassword(e.target.value)}
+                      className="pr-10"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(prev => !prev)}
+                      className="absolute inset-y-0 right-0 flex items-center px-3 text-muted-foreground hover:text-foreground"
+                      aria-label={showPassword ? 'Hide password' : 'Show password'}
+                    >
+                      {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    </button>
+                  </div>
                 </div>
               </>
             ) : (

@@ -1,8 +1,10 @@
 import { useNavigate } from 'react-router-dom';
-import { Search, MapPin, ArrowRight, Star } from 'lucide-react';
+import { Search, MapPin, ArrowRight, Star, Zap } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { venues, sports } from '@/data/mockData';
+import { sports } from '@/data/mockData';
+import { useFacility } from '@/contexts/FacilityContext';
+import { useAuth } from '@/contexts/AuthContext';
 import VenueCard from '@/components/VenueCard';
 import heroBanner from '@/assets/hero-banner.svg';
 import Navbar from '@/components/Navbar';
@@ -11,8 +13,10 @@ import { useState } from 'react';
 
 const HomePage = () => {
   const navigate = useNavigate();
+  const { user, isAuthenticated } = useAuth();
   const [search, setSearch] = useState('');
-  const popularVenues = venues.filter(v => v.approved).slice(0, 4);
+  const { getApprovedVenues } = useFacility();
+  const popularVenues = getApprovedVenues().slice(0, 4);
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -47,6 +51,34 @@ const HomePage = () => {
           </div>
         </div>
       </section>
+
+      {/* Quick Book CTA - Only for authenticated users */}
+      {isAuthenticated && user?.role === 'user' && (
+        <section className="bg-gradient-to-r from-primary/10 via-secondary/10 to-accent/10 py-12 border-b">
+          <div className="container">
+            <div className="flex items-center justify-between">
+              <div className="flex-1">
+                <div className="flex items-center gap-2 mb-2">
+                  <Zap className="h-5 w-5 text-accent" />
+                  <span className="text-sm font-semibold text-accent">QUICK BOOKING</span>
+                </div>
+                <h3 className="text-2xl font-display font-bold mb-2">Browse & Book All Courts Instantly</h3>
+                <p className="text-muted-foreground max-w-lg">
+                  View all available courts and their time slots at once. No need to browse venues one by one. Book your favorite slot in seconds.
+                </p>
+              </div>
+              <Button 
+                size="lg" 
+                onClick={() => navigate('/quick-book')}
+                className="gap-2"
+              >
+                <Zap className="h-4 w-4" />
+                Quick Book Now
+              </Button>
+            </div>
+          </div>
+        </section>
+      )}
 
       {/* Popular Sports */}
       <section className="container py-16">

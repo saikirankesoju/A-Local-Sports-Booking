@@ -1,9 +1,11 @@
 import { Users, Building2, CalendarCheck, Grid3X3, TrendingUp } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { allUsers, venues, bookings, courts } from '@/data/mockData';
+import { courts } from '@/data/mockData';
 import Navbar from '@/components/Navbar';
 import AdminSidebar from '@/components/AdminSidebar';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line, PieChart, Pie, Cell } from 'recharts';
+import { useFacility } from '@/contexts/FacilityContext';
+import { useData } from '@/contexts/DataContext';
 
 const bookingActivity = [
   { month: 'Jan', bookings: 45 }, { month: 'Feb', bookings: 72 },
@@ -22,8 +24,12 @@ const sportData = [
 const COLORS = ['hsl(160, 84%, 29%)', 'hsl(120, 60%, 35%)', 'hsl(38, 92%, 50%)', 'hsl(15, 90%, 55%)', 'hsl(210, 70%, 45%)'];
 
 const AdminDashboard = () => {
-  const totalUsers = allUsers.filter(u => u.role === 'user').length;
-  const totalOwners = allUsers.filter(u => u.role === 'owner').length;
+  const { getPendingVenues, getApprovedVenues } = useFacility();
+  const { users, bookings } = useData();
+  const totalUsers = users.filter(u => u.role === 'user').length;
+  const totalOwners = users.filter(u => u.role === 'owner').length;
+  const pendingVenues = getPendingVenues();
+  const approvedVenues = getApprovedVenues();
 
   const stats = [
     { label: 'Total Users', value: totalUsers, icon: Users },
@@ -48,49 +54,92 @@ const AdminDashboard = () => {
                   <div className="p-3 rounded-xl bg-primary/10 text-primary"><s.icon className="h-5 w-5" /></div>
                   <div>
                     <p className="text-sm text-muted-foreground">{s.label}</p>
-                    <p className="text-2xl font-bold">{s.value}</p>
+                    <p className="text-xl font-bold">{s.value}</p>
                   </div>
                 </CardContent>
               </Card>
             ))}
           </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
             <Card>
-              <CardHeader><CardTitle className="text-base">Booking Activity</CardTitle></CardHeader>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2"><TrendingUp className="h-5 w-5" /> Booking Activity</CardTitle>
+              </CardHeader>
               <CardContent>
-                <ResponsiveContainer width="100%" height={250}>
+                <ResponsiveContainer width="100%" height={300}>
                   <BarChart data={bookingActivity}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="hsl(210 20% 90%)" />
-                    <XAxis dataKey="month" fontSize={12} /><YAxis fontSize={12} /><Tooltip />
-                    <Bar dataKey="bookings" fill="hsl(160, 84%, 29%)" radius={[4, 4, 0, 0]} />
+                    <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--muted-foreground))" />
+                    <XAxis dataKey="month" stroke="hsl(var(--muted-foreground))" />
+                    <YAxis stroke="hsl(var(--muted-foreground))" />
+                    <Tooltip />
+                    <Bar dataKey="bookings" fill="hsl(160, 84%, 39%)" />
                   </BarChart>
                 </ResponsiveContainer>
               </CardContent>
             </Card>
+
             <Card>
-              <CardHeader><CardTitle className="text-base">User Registration Trends</CardTitle></CardHeader>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2"><Users className="h-5 w-5" /> User Growth</CardTitle>
+              </CardHeader>
               <CardContent>
-                <ResponsiveContainer width="100%" height={250}>
+                <ResponsiveContainer width="100%" height={300}>
                   <LineChart data={userTrends}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="hsl(210 20% 90%)" />
-                    <XAxis dataKey="month" fontSize={12} /><YAxis fontSize={12} /><Tooltip />
-                    <Line type="monotone" dataKey="users" stroke="hsl(38, 92%, 50%)" strokeWidth={2} />
+                    <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--muted-foreground))" />
+                    <XAxis dataKey="month" stroke="hsl(var(--muted-foreground))" />
+                    <YAxis stroke="hsl(var(--muted-foreground))" />
+                    <Tooltip />
+                    <Line type="monotone" dataKey="users" stroke="hsl(160, 84%, 39%)" strokeWidth={2} />
                   </LineChart>
                 </ResponsiveContainer>
               </CardContent>
             </Card>
-            <Card className="lg:col-span-2">
-              <CardHeader><CardTitle className="text-base">Most Active Sports</CardTitle></CardHeader>
-              <CardContent className="flex justify-center">
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <Card>
+              <CardHeader><CardTitle>Sport Distribution</CardTitle></CardHeader>
+              <CardContent>
                 <ResponsiveContainer width="100%" height={250}>
                   <PieChart>
-                    <Pie data={sportData} cx="50%" cy="50%" innerRadius={60} outerRadius={100} paddingAngle={3} dataKey="value" label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}>
-                      {sportData.map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}
+                    <Pie data={sportData} cx="50%" cy="50%" labelLine={false} label={({ name, value }) => `${name} ${value}`} outerRadius={80} fill="#8884d8" dataKey="value">
+                      {sportData.map((_entry, index) => (
+                        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                      ))}
                     </Pie>
-                    <Tooltip />
                   </PieChart>
                 </ResponsiveContainer>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader><CardTitle>Facility Status</CardTitle></CardHeader>
+              <CardContent>
+                <div className="space-y-3">
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm font-medium">Pending Approval</span>
+                    <span className="text-lg font-bold text-amber-600">{pendingVenues.length}</span>
+                  </div>
+                  <div className="w-full bg-gray-200 rounded-full h-2"><div className="bg-amber-500 h-2 rounded-full" style={{width: `${pendingVenues.length * 20}%`}} /></div>
+                  <div className="flex justify-between items-center pt-3">
+                    <span className="text-sm font-medium">Approved</span>
+                    <span className="text-lg font-bold text-green-600">{approvedVenues.length}</span>
+                  </div>
+                  <div className="w-full bg-gray-200 rounded-full h-2"><div className="bg-green-500 h-2 rounded-full" style={{width: `${approvedVenues.length * 10}%`}} /></div>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader><CardTitle>Recent Activity</CardTitle></CardHeader>
+              <CardContent>
+                <ul className="space-y-2 text-sm">
+                  <li className="flex justify-between"><span>New User Signups</span><span className="font-bold">12</span></li>
+                  <li className="flex justify-between"><span>New Facilities</span><span className="font-bold">{pendingVenues.length + approvedVenues.length}</span></li>
+                  <li className="flex justify-between"><span>Bookings Today</span><span className="font-bold">8</span></li>
+                  <li className="flex justify-between"><span>Support Tickets</span><span className="font-bold">3</span></li>
+                </ul>
               </CardContent>
             </Card>
           </div>

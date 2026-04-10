@@ -1,18 +1,23 @@
 import { useParams, useNavigate } from 'react-router-dom';
-import { Star, MapPin, Check, ArrowLeft } from 'lucide-react';
+import { Star, MapPin, Check, ArrowLeft, BookOpen } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { venues, courts, reviews } from '@/data/mockData';
+import { reviews } from '@/data/mockData';
+import { useFacility } from '@/contexts/FacilityContext';
+import { useCourts } from '@/contexts/CourtsContext';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 
 const VenueDetailPage = () => {
   const { id } = useParams();
   const navigate = useNavigate();
+  const { venues } = useFacility();
+  const { getVenueCourts } = useCourts();
+  
   const venue = venues.find(v => v.id === id);
-  const venueCourts = courts.filter(c => c.venueId === id);
+  const venueCourts = getVenueCourts(id || '');
   const venueReviews = reviews.filter(r => r.venueId === id);
 
   if (!venue) {

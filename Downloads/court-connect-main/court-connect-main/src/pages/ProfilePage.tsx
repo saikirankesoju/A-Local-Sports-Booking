@@ -8,12 +8,14 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import { toast } from 'sonner';
-import { bookings } from '@/data/mockData';
 import { Badge } from '@/components/ui/badge';
 import { Calendar, Clock } from 'lucide-react';
+import { useData } from '@/contexts/DataContext';
+import { formatTime } from '@/lib/utils';
 
 const ProfilePage = () => {
   const { user } = useAuth();
+  const { bookings } = useData();
   const [fullName, setFullName] = useState(user?.fullName || '');
   const [email, setEmail] = useState(user?.email || '');
 
@@ -21,7 +23,7 @@ const ProfilePage = () => {
 
   if (!user) return null;
 
-  const userBookings = bookings.filter(b => b.userId === 'u1');
+  const userBookings = bookings.filter(b => b.userId === user.id);
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -69,7 +71,7 @@ const ProfilePage = () => {
                       <p className="font-medium">{b.venueName}</p>
                       <div className="flex gap-3 text-sm text-muted-foreground mt-1">
                         <span className="flex items-center gap-1"><Calendar className="h-3 w-3" /> {b.date}</span>
-                        <span className="flex items-center gap-1"><Clock className="h-3 w-3" /> {b.startTime}</span>
+                        <span className="flex items-center gap-1"><Clock className="h-3 w-3" /> {formatTime(b.startTime)} IST</span>
                       </div>
                     </div>
                     <Badge variant="outline" className="capitalize">{b.status}</Badge>

@@ -4,7 +4,8 @@ import { Search, SlidersHorizontal } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { venues, sports } from '@/data/mockData';
+import { sports } from '@/data/mockData';
+import { useFacility } from '@/contexts/FacilityContext';
 import VenueCard from '@/components/VenueCard';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
@@ -18,9 +19,10 @@ const VenuesPage = () => {
   const [venueTypeFilter, setVenueTypeFilter] = useState('all');
   const [sortBy, setSortBy] = useState('rating');
   const [page, setPage] = useState(1);
+  const { getApprovedVenues } = useFacility();
 
   const filtered = useMemo(() => {
-    let result = venues.filter(v => v.approved);
+    let result = getApprovedVenues();
     if (search) {
       const s = search.toLowerCase();
       result = result.filter(v => v.name.toLowerCase().includes(s) || v.shortLocation.toLowerCase().includes(s));
@@ -35,7 +37,7 @@ const VenuesPage = () => {
     else if (sortBy === 'price-low') result.sort((a, b) => a.startingPrice - b.startingPrice);
     else if (sortBy === 'price-high') result.sort((a, b) => b.startingPrice - a.startingPrice);
     return result;
-  }, [search, sportFilter, venueTypeFilter, sortBy]);
+  }, [search, sportFilter, venueTypeFilter, sortBy, getApprovedVenues]);
 
   const totalPages = Math.ceil(filtered.length / ITEMS_PER_PAGE);
   const paginated = filtered.slice((page - 1) * ITEMS_PER_PAGE, page * ITEMS_PER_PAGE);

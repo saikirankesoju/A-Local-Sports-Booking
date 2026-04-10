@@ -1,0 +1,144 @@
+================================================================================
+                    NPM RUN DEV - TEST EXECUTION SCRIPTS
+================================================================================
+
+QUICK START:
+~~~~~~~~~~~~
+
+Run this command in your terminal/command prompt:
+
+    python test_npm_dev_4_ways.py
+
+Or if you prefer batch script:
+
+    RUN_NPM_DEV_TEST.cmd
+
+That's it! The script will test 4 different ways to run npm dev and show you
+which one works best.
+
+================================================================================
+
+WHAT WILL HAPPEN:
+~~~~~~~~~~~~~~~~~
+
+The script will:
+1. Try: npm run dev
+2. Try: npm.cmd run dev  
+3. Try: cmd /c npm run dev
+4. Try: node npm-cli.js run dev
+
+Each gets 15 seconds. All output captured. Exit codes shown.
+
+Expected output will contain:
+✓ "localhost" 
+✓ "VITE"
+✓ "5173" (port number)
+
+If all 3 appear = SUCCESS! Dev server is running.
+
+================================================================================
+
+OUTPUT EXAMPLE:
+~~~~~~~~~~~~~~~
+
+[ATTEMPT 1] npm run dev
+============================================================
+
+Command: npm run dev
+
+--- OUTPUT START ---
+=== STDOUT ===
+VITE v5.4.19  ready in 234 ms
+
+➜  Local:   http://localhost:5173/
+➜  Network: use --host to expose
+--- OUTPUT END ---
+
+Exit Code: 124 (TIMEOUT - process still running after 15s)
+Elapsed Time: 15.02s
+
+Findings:
+  ✓ Contains 'localhost'
+  ✓ Contains 'VITE'
+  ✓ Contains '5173'
+
+=== END ATTEMPT 1 ===
+
+[RESULT] ==> SUCCESS! Use: npm run dev
+
+================================================================================
+
+REQUIREMENTS:
+~~~~~~~~~~~~~~
+
+✓ Python 3.6+ installed (for Python script)
+  OR
+✓ Windows command prompt (for batch script)
+
+✓ Node.js installed  
+  Check: node --version
+
+✓ npm installed
+  Check: npm --version
+
+================================================================================
+
+TROUBLESHOOTING:
+~~~~~~~~~~~~~~~~
+
+"Python not found"
+  → Use RUN_NPM_DEV_TEST.cmd instead
+
+"npm is not found"
+  → Install Node.js from https://nodejs.org/
+
+"Port 5173 in use"
+  → Close other npm dev server or use different port
+
+"Dependencies missing"
+  → Run: npm install
+  → Then run test again
+
+More help: See ENVIRONMENT_DIAGNOSTIC.md
+
+================================================================================
+
+FILES CREATED:
+~~~~~~~~~~~~~~
+
+TEST SCRIPTS:
+  - test_npm_dev_4_ways.py       ← Recommended (Python)
+  - RUN_NPM_DEV_TEST.cmd         ← Alternative (Batch)
+  - npm_dev_test_runner.cmd      ← Original (Batch)
+
+DOCUMENTATION:
+  - README_TEST_SCRIPTS.md       ← Quick reference
+  - NPM_DEV_TEST_INSTRUCTIONS.md ← Detailed guide
+  - ENVIRONMENT_DIAGNOSTIC.md    ← Troubleshooting
+  - TEST_EXECUTION_SUMMARY.md    ← Technical details
+  - EXECUTION_REPORT.md          ← Full report
+  - START_HERE.txt               ← This file
+
+================================================================================
+
+NEXT STEPS:
+~~~~~~~~~~~
+
+1. Open command prompt / PowerShell
+2. Navigate to this directory:
+   cd C:\Users\Dell\Downloads\court-connect-main\court-connect-main
+3. Run:
+   python test_npm_dev_4_ways.py
+4. Read the output
+5. Use the successful command for development
+
+DONE!
+
+================================================================================
+
+Questions? See:
+- README_TEST_SCRIPTS.md (quick answers)
+- ENVIRONMENT_DIAGNOSTIC.md (detailed troubleshooting)
+- EXECUTION_REPORT.md (technical details)
+
+================================================================================

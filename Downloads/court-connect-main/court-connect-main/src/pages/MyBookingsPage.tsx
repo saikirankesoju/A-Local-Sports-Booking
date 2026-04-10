@@ -3,10 +3,12 @@ import { Calendar, MapPin, Clock, XCircle, CheckCircle, Filter } from 'lucide-re
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { bookings } from '@/data/mockData';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import { toast } from 'sonner';
+import { useAuth } from '@/contexts/AuthContext';
+import { useData } from '@/contexts/DataContext';
+import { formatTimeRange } from '@/lib/utils';
 
 const statusColors = {
   confirmed: 'bg-success/10 text-success border-success/20',
@@ -16,11 +18,14 @@ const statusColors = {
 
 const MyBookingsPage = () => {
   const [statusFilter, setStatusFilter] = useState('all');
-  const userBookings = bookings.filter(b => b.userId === 'u1');
+  const { user } = useAuth();
+  const { bookings, updateBooking } = useData();
+  const userBookings = user ? bookings.filter(b => b.userId === user.id) : [];
   const filtered = statusFilter === 'all' ? userBookings : userBookings.filter(b => b.status === statusFilter);
 
   const handleCancel = (id: string) => {
-    toast.success('Booking cancelled');
+    updateBooking(id, { status: 'cancelled' });
+    toast.success('Booking cancelled successfully');
   };
 
   return (
@@ -55,7 +60,7 @@ const MyBookingsPage = () => {
                     <div className="flex flex-wrap gap-4 text-sm text-muted-foreground">
                       <span className="flex items-center gap-1">🏸 {booking.sportType}</span>
                       <span className="flex items-center gap-1"><Calendar className="h-3.5 w-3.5" /> {booking.date}</span>
-                      <span className="flex items-center gap-1"><Clock className="h-3.5 w-3.5" /> {booking.startTime} - {booking.endTime}</span>
+                      <span className="flex items-center gap-1"><Clock className="h-3.5 w-3.5" /> {formatTimeRange(booking.startTime, booking.endTime)} IST</span>
                     </div>
                     <p className="text-sm">Court: <span className="font-medium">{booking.courtName}</span></p>
                   </div>

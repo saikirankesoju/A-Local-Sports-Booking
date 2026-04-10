@@ -1,9 +1,12 @@
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
-import { bookings, venues } from '@/data/mockData';
+import { venues } from '@/data/mockData';
 import Navbar from '@/components/Navbar';
 import OwnerSidebar from '@/components/OwnerSidebar';
 import { Calendar, Clock, User } from 'lucide-react';
+import { useData } from '@/contexts/DataContext';
+import { useAuth } from '@/contexts/AuthContext';
+import { formatTimeRange } from '@/lib/utils';
 
 const statusColors = {
   confirmed: 'bg-success/10 text-success border-success/20',
@@ -12,7 +15,9 @@ const statusColors = {
 };
 
 const OwnerBookings = () => {
-  const ownerVenues = venues.filter(v => v.ownerId === 'o1');
+  const { bookings } = useData();
+  const { user } = useAuth();
+  const ownerVenues = venues.filter(v => v.ownerId === user?.id);
   const ownerBookings = bookings.filter(b => ownerVenues.some(v => v.id === b.venueId));
 
   return (
@@ -31,7 +36,7 @@ const OwnerBookings = () => {
                     <div className="flex flex-wrap gap-3 text-sm text-muted-foreground mt-1">
                       <span className="flex items-center gap-1"><User className="h-3.5 w-3.5" /> {b.userName}</span>
                       <span className="flex items-center gap-1"><Calendar className="h-3.5 w-3.5" /> {b.date}</span>
-                      <span className="flex items-center gap-1"><Clock className="h-3.5 w-3.5" /> {b.startTime} - {b.endTime}</span>
+                      <span className="flex items-center gap-1"><Clock className="h-3.5 w-3.5" /> {formatTimeRange(b.startTime, b.endTime)} IST</span>
                     </div>
                   </div>
                   <div className="flex items-center gap-3">

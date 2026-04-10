@@ -4,3 +4,21 @@ import { twMerge } from "tailwind-merge";
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
+
+export function formatTime(time: string) {
+  const [hoursPart, minutesPart = '00'] = time.split(':');
+  const hours = Number.parseInt(hoursPart, 10);
+
+  if (Number.isNaN(hours)) {
+    return time;
+  }
+
+  const period = hours >= 12 ? 'PM' : 'AM';
+  const normalizedHours = hours % 12 || 12;
+
+  return `${normalizedHours}:${minutesPart.padStart(2, '0')} ${period}`;
+}
+
+export function formatTimeRange(startTime: string, endTime: string) {
+  return `${formatTime(startTime)} - ${formatTime(endTime)}`;
+}

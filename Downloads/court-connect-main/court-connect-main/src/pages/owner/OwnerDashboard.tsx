@@ -1,10 +1,11 @@
 import { CalendarCheck, Grid3X3, DollarSign, TrendingUp } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useAuth } from '@/contexts/AuthContext';
-import { bookings, courts, venues } from '@/data/mockData';
+import { courts, venues } from '@/data/mockData';
 import Navbar from '@/components/Navbar';
 import OwnerSidebar from '@/components/OwnerSidebar';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line, AreaChart, Area } from 'recharts';
+import { useData } from '@/contexts/DataContext';
 
 const weeklyData = [
   { day: 'Mon', bookings: 12 }, { day: 'Tue', bookings: 19 },
@@ -29,7 +30,8 @@ const peakHoursData = [
 
 const OwnerDashboard = () => {
   const { user } = useAuth();
-  const ownerVenues = venues.filter(v => v.ownerId === 'o1');
+  const { bookings } = useData();
+  const ownerVenues = venues.filter(v => v.ownerId === user?.id);
   const ownerCourts = courts.filter(c => ownerVenues.some(v => v.id === c.venueId));
   const totalBookings = bookings.filter(b => ownerVenues.some(v => v.id === b.venueId)).length;
   const totalEarnings = bookings.filter(b => ownerVenues.some(v => v.id === b.venueId) && b.status !== 'cancelled').reduce((s, b) => s + b.totalPrice, 0);

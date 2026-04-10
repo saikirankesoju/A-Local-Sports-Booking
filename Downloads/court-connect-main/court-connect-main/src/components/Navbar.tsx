@@ -1,6 +1,6 @@
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
-import { MapPin, Calendar, User, LogOut, Menu, X, LayoutDashboard } from 'lucide-react';
+import { Calendar, User, LogOut, Menu, X, LayoutDashboard, Zap } from 'lucide-react';
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
@@ -13,7 +13,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 
 const Navbar = () => {
-  const { user, isAuthenticated, logout, switchRole } = useAuth();
+  const { user, isAuthenticated, logout } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -23,6 +23,7 @@ const Navbar = () => {
   const userLinks = [
     { path: '/', label: 'Home' },
     { path: '/venues', label: 'Venues' },
+    { path: '/quick-book', label: 'Quick Book', icon: Zap, authRequired: true },
   ];
 
   const getDashboardPath = () => {
@@ -41,19 +42,27 @@ const Navbar = () => {
 
         {/* Desktop Nav */}
         <div className="hidden md:flex items-center gap-1">
-          {(!user || user.role === 'user') && userLinks.map(link => (
-            <Link
-              key={link.path}
-              to={link.path}
-              className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                isActive(link.path)
-                  ? 'bg-primary/10 text-primary'
-                  : 'text-muted-foreground hover:text-foreground hover:bg-muted'
-              }`}
-            >
-              {link.label}
-            </Link>
-          ))}
+          {userLinks.map(link => {
+            // Show Quick Book only if authenticated and user role is user/not owner/admin
+            if (link.authRequired && (!isAuthenticated || user?.role !== 'user')) return null;
+            if (!link.authRequired && user && (user.role === 'owner' || user.role === 'admin')) return null;
+            
+            const Icon = link.icon as any;
+            return (
+              <Link
+                key={link.path}
+                to={link.path}
+                className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2 ${
+                  isActive(link.path)
+                    ? 'bg-primary/10 text-primary'
+                    : 'text-muted-foreground hover:text-foreground hover:bg-muted'
+                }`}
+              >
+                {Icon && <Icon className="h-4 w-4" />}
+                {link.label}
+              </Link>
+            );
+          })}
           {user && (user.role === 'owner' || user.role === 'admin') && (
             <Link
               to={getDashboardPath()}
@@ -93,29 +102,17 @@ const Navbar = () => {
                   <User className="mr-2 h-4 w-4" /> Profile
                 </DropdownMenuItem>
                 {user.role === 'user' && (
-                  <DropdownMenuItem onClick={() => navigate('/my-bookings')}>
-                    <Calendar className="mr-2 h-4 w-4" /> My Bookings
-                  </DropdownMenuItem>
+                  <>
+                    <DropdownMenuItem onClick={() => navigate('/quick-book')}>
+                      <Zap className="mr-2 h-4 w-4" /> Quick Book
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => navigate('/my-bookings')}>
+                      <Calendar className="mr-2 h-4 w-4" /> My Bookings
+                    </DropdownMenuItem>
+                  </>
                 )}
                 <DropdownMenuSeparator />
-                <div className="px-2 py-1.5">
-                  <p className="text-xs text-muted-foreground mb-1">Switch role (demo)</p>
-                  <div className="flex gap-1">
-                    {(['user', 'owner', 'admin'] as const).map(role => (
-                      <button
-                        key={role}
-                        onClick={() => switchRole(role)}
-                        className={`text-xs px-2 py-1 rounded capitalize ${
-                          user.role === role ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground hover:bg-muted/80'
-                        }`}
-                      >
-                        {role}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={() => { logout(); navigate('/'); }}>
+                <DropdownMenuItem onClick={() => { logout(); navigate('/login'); }}>
                   <LogOut className="mr-2 h-4 w-4" /> Logout
                 </DropdownMenuItem>
               </DropdownMenuContent>
@@ -138,21 +135,29 @@ const Navbar = () => {
       {mobileOpen && (
         <div className="md:hidden border-t bg-card p-4 animate-fade-in">
           <div className="flex flex-col gap-2">
-            {(!user || user.role === 'user') && userLinks.map(link => (
-              <Link key={link.path} to={link.path} onClick={() => setMobileOpen(false)}
-                className={`px-4 py-2 rounded-lg text-sm font-medium ${isActive(link.path) ? 'bg-primary/10 text-primary' : 'text-muted-foreground'}`}>
-                {link.label}
-              </Link>
-            ))}
+            {userLinks.map(link => {
+              // Show Quick Book only if authenticated and user role is user/not owner/admin
+              if (link.authRequired && (!isAuthenticated || user?.role !== 'user')) return null;
+              if (!link.authRequired && user && (user.role === 'owner' || user.role === 'admin')) return null;
+              
+              const Icon = link.icon as any;
+              return (
+                <Link key={link.path} to={link.path} onClick={() => setMobileOpen(false)}
+                  className={`px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2 ${isActive(link.path) ? 'bg-primary/10 text-primary' : 'text-muted-foreground'}`}>
+                  {Icon && <Icon className="h-4 w-4" />}
+                  {link.label}
+                </Link>
+              );
+            })}
             {isAuthenticated ? (
               <>
                 <Link to="/profile" onClick={() => setMobileOpen(false)} className="px-4 py-2 rounded-lg text-sm font-medium text-muted-foreground">Profile</Link>
-                <button onClick={() => { logout(); navigate('/'); setMobileOpen(false); }} className="px-4 py-2 rounded-lg text-sm font-medium text-destructive text-left">Logout</button>
+                <button onClick={() => { logout(); navigate('/login'); setMobileOpen(false); }} className="px-4 py-2 rounded-lg text-sm font-medium text-destructive text-left">Logout</button>
               </>
             ) : (
               <>
-                <Link to="/login" onClick={() => setMobileOpen(false)} className="px-4 py-2 rounded-lg text-sm font-medium text-muted-foreground">Log in</Link>
-                <Link to="/signup" onClick={() => setMobileOpen(false)} className="px-4 py-2 rounded-lg text-sm font-medium text-primary">Sign up</Link>
+                <Button variant="ghost" className="w-full justify-start" onClick={() => { navigate('/login'); setMobileOpen(false); }}>Log in</Button>
+                <Button className="w-full" onClick={() => { navigate('/signup'); setMobileOpen(false); }}>Sign up</Button>
               </>
             )}
           </div>

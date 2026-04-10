@@ -1,11 +1,12 @@
 import { Venue, Court, Booking, Review, Sport, TimeSlot, User } from '@/types';
 
 export const currentUser: User = {
-  id: 'u1',
-  email: 'john@example.com',
-  fullName: 'John Doe',
+  id: 'o1',
+  email: 'owner1@example.com',
+  fullName: 'Raj Kumar',
   avatar: '',
-  role: 'user',
+  role: 'owner',
+  password: 'Owner@1234',
 };
 
 export const sports: Sport[] = [
@@ -85,11 +86,8 @@ export const reviews: Review[] = [
 ];
 
 export const allUsers: User[] = [
-  { id: 'u1', email: 'john@example.com', fullName: 'John Doe', role: 'user' },
-  { id: 'u2', email: 'jane@example.com', fullName: 'Jane Smith', role: 'user' },
-  { id: 'u3', email: 'mike@example.com', fullName: 'Mike Johnson', role: 'user' },
-  { id: 'o1', email: 'owner1@example.com', fullName: 'Raj Kumar', role: 'owner' },
-  { id: 'o2', email: 'owner2@example.com', fullName: 'Priya Sharma', role: 'owner' },
-  { id: 'o3', email: 'owner3@example.com', fullName: 'Arun Patel', role: 'owner' },
-  { id: 'a1', email: 'admin@quickcourt.com', fullName: 'Admin User', role: 'admin' },
+  { id: 'adm1', email: 'kiran234@gmail.com', fullName: 'Kiran', role: 'admin', password: 'Kiran@1234' },
+  { id: 'o1', email: 'owner1@example.com', fullName: 'Raj Kumar', role: 'owner', password: 'Owner@1234' },
+  { id: 'o2', email: 'owner2@example.com', fullName: 'Priya Sharma', role: 'owner', password: 'Owner@1234' },
+  { id: 'o3', email: 'owner3@example.com', fullName: 'Arjun Singh', role: 'owner', password: 'Owner@1234' },
 ];
