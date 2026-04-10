@@ -22,7 +22,7 @@ const LoginPage = () => {
   
   // Admin credentials
   const ADMIN_EMAIL = 'sai@gmail.com';
-  const ADMIN_PASSWORD = 'Admin@1234';
+  const ADMIN_PASSWORD = 'sai@123';
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

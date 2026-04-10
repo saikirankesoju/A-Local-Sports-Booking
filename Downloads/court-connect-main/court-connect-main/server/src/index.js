@@ -35,9 +35,9 @@ io.on('connection', socket => {
 });
 
 const DEFAULT_ADMIN = {
-  fullName: 'Kiran',
-  email: 'kiran234@gmail.com',
-  password: 'Kiran@1234',
+  fullName: 'Sai',
+  email: 'sai@gmail.com',
+  password: 'sai@123',
   role: 'admin',
 };
 

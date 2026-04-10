@@ -86,7 +86,7 @@ export const reviews: Review[] = [
 ];
 
 export const allUsers: User[] = [
-  { id: 'adm1', email: 'kiran234@gmail.com', fullName: 'Kiran', role: 'admin', password: 'Kiran@1234' },
+  { id: 'adm1', email: 'sai@gmail.com', fullName: 'Sai', role: 'admin', password: 'sai@123' },
   { id: 'o1', email: 'owner1@example.com', fullName: 'Raj Kumar', role: 'owner', password: 'Owner@1234' },
   { id: 'o2', email: 'owner2@example.com', fullName: 'Priya Sharma', role: 'owner', password: 'Owner@1234' },
   { id: 'o3', email: 'owner3@example.com', fullName: 'Arjun Singh', role: 'owner', password: 'Owner@1234' },
