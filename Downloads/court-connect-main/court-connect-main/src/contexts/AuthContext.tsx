@@ -116,7 +116,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   }, [registeredUsers]);
 
-  const signup = useCallback(async (email: string, password: string, fullName: string, role: UserRole) => {
+  const signup = useCallback(async (email: string, password: string, fullName: string, role: Exclude<UserRole, 'admin'>) => {
     try {
       const { api } = await import('@/lib/api');
       const response = await api.auth.register({ fullName, email, password, role });
@@ -124,25 +124,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       persistUser(response.user);
       return response.user;
     } catch {
-      const existingUser = registeredUsers.find(u => u.email.toLowerCase() === email.toLowerCase());
-
-      if (existingUser) {
-        persistUser(existingUser);
-        return existingUser;
-      }
-
-      const newUser: User = {
-        id: `user-${Date.now()}`,
-        email,
-        fullName,
-        role,
-        avatar: '',
-        password,
-      };
-
-      persistUsers([...registeredUsers, newUser]);
-      persistUser(newUser);
-      return newUser;
+      persistUser(null);
+      persistToken(null);
+      return null;
     }
   }, [registeredUsers]);
 

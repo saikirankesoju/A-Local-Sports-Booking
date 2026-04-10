@@ -1,6 +1,16 @@
 import { User } from '../models/User.js';
 import { revokeAccessToken, signAuthToken } from '../utils/jwt.js';
 
+const DEFAULT_USERS = [
+  { fullName: 'Sai', email: 'sai@gmail.com', password: 'sai@123', role: 'admin' },
+  { fullName: 'Saikiran', email: 'saikiran@gmail.com', password: 'sai@1234', role: 'owner' },
+  { fullName: 'Sai Runner', email: 'sairunner@gmail.com', password: 'sai@12345', role: 'user' },
+];
+
+function findDefaultUser(email) {
+  return DEFAULT_USERS.find(user => user.email.toLowerCase() === email.toLowerCase()) || null;
+}
+
 function sanitizeUser(user) {
   return {
     id: user._id,
@@ -17,6 +27,11 @@ export async function register(req, res, next) {
 
     if (!fullName || !email || !password) {
       return res.status(400).json({ message: 'Missing required fields' });
+    }
+
+    const defaultUser = findDefaultUser(email);
+    if (!defaultUser || defaultUser.password !== password || defaultUser.role !== role || defaultUser.fullName !== fullName) {
+      return res.status(403).json({ message: 'Registration is disabled. Use the predefined accounts.' });
     }
 
     const existing = await User.findOne({ email: email.toLowerCase() });
