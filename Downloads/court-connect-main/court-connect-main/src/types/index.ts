@@ -41,6 +41,11 @@ export interface Court {
   pricePerHour: number;
   operatingHoursStart: string;
   operatingHoursEnd: string;
+  slots?: Array<{
+    startTime: string;
+    endTime: string;
+    available?: boolean;
+  }>;
 }
 
 export interface TimeSlot {
@@ -66,7 +71,7 @@ export interface Booking {
   startTime: string;
   endTime: string;
   totalPrice: number;
-  status: 'confirmed' | 'cancelled' | 'completed';
+  status: 'pending' | 'approved' | 'rejected' | 'confirmed' | 'cancelled' | 'completed';
   createdAt: string;
 }
 

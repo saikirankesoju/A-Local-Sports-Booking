@@ -2,17 +2,19 @@ import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft, CheckCircle, Calendar } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { generateTimeSlots } from '@/data/mockData';
 import { useAuth } from '@/contexts/AuthContext';
 import { useFacility } from '@/contexts/FacilityContext';
 import { useCourts } from '@/contexts/CourtsContext';
 import { useData } from '@/contexts/DataContext';
 import { useTimeSlots } from '@/contexts/TimeSlotsContext';
+import { generateCourtSlotsForDate } from '@/lib/slots';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import { toast } from 'sonner';
 import { Card, CardContent } from '@/components/ui/card';
 import { formatTime, formatTimeRange } from '@/lib/utils';
+
+const isOccupiedStatus = (status: string) => status !== 'cancelled' && status !== 'rejected';
 
 const BookingPage = () => {
   const { venueId } = useParams();
@@ -21,7 +23,7 @@ const BookingPage = () => {
   const { venues } = useFacility();
   const { getVenueCourts } = useCourts();
   const { addBooking, bookings } = useData();
-  const { bookSlot } = useTimeSlots();
+  const { bookSlot, isSlotBlocked } = useTimeSlots();
   
   const venue = venues.find(v => v.id === venueId);
   const venueCourts = getVenueCourts(venueId || '');
@@ -33,19 +35,23 @@ const BookingPage = () => {
 
   const [selectedCourt, setSelectedCourt] = useState(firstCourtId);
   const [selectedDate, setSelectedDate] = useState(todayDate);
-  const [selectedSlot, setSelectedSlot] = useState('');
+  const [selectedSlotId, setSelectedSlotId] = useState('');
   const [confirmed, setConfirmed] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Update selectedCourt if firstCourtId changes (when venueCourts load)
+  // Keep selected court stable unless empty or no longer valid.
   useEffect(() => {
-    if (firstCourtId && selectedCourt !== firstCourtId) {
+    if (!firstCourtId) return;
+
+    const selectedStillExists = venueCourts.some(c => c.id === selectedCourt);
+    if (!selectedCourt || !selectedStillExists) {
       setSelectedCourt(firstCourtId);
     }
-  }, [firstCourtId, selectedCourt]);
+  }, [firstCourtId, selectedCourt, venueCourts]);
 
   const court = venueCourts.find(c => c.id === selectedCourt);
-  const timeSlots = selectedCourt && selectedDate ? generateTimeSlots(selectedCourt, selectedDate) : [];
-  const slot = timeSlots.find(s => s.id === selectedSlot);
+  const timeSlots = court && selectedDate ? generateCourtSlotsForDate(court, selectedDate) : [];
+  const selectedSlot = timeSlots.find(s => s.id === selectedSlotId) || null;
 
   const dates = Array.from({ length: 7 }, (_, i) => {
     const d = new Date();
@@ -53,23 +59,24 @@ const BookingPage = () => {
     return d.toISOString().split('T')[0];
   });
 
-  // Check if a slot is booked
-  const isSlotBooked = (slotId: string) => {
-    return bookings.some(b => {
-      const booking = bookings.find(bk => bk.id);
-      return b.courtId === selectedCourt && b.date === selectedDate && b.status !== 'cancelled';
-    });
-  };
-
   const handleConfirm = () => {
+    if (isSubmitting) {
+      return;
+    }
+
     if (!isAuthenticated || !user) {
       toast.error('Please login to book a court');
       navigate('/login');
       return;
     }
     
-    if (!court || !slot || !venue) {
+    if (!court || !selectedSlot || !venue) {
       toast.error('Please select all options');
+      return;
+    }
+
+    if (isSlotBlocked(selectedSlot.id)) {
+      toast.error('This slot is blocked by facility owner. Please choose another time.');
       return;
     }
 
@@ -77,8 +84,8 @@ const BookingPage = () => {
     const existingBooking = bookings.find(
       b => b.courtId === selectedCourt && 
            b.date === selectedDate && 
-           b.startTime === slot.startTime &&
-           b.status !== 'cancelled'
+          b.startTime === selectedSlot.startTime &&
+          isOccupiedStatus(b.status)
     );
 
     if (existingBooking) {
@@ -97,17 +104,19 @@ const BookingPage = () => {
       courtName: court.name,
       sportType: court.sportType,
       date: selectedDate,
-      startTime: slot.startTime,
-      endTime: slot.endTime,
+      startTime: selectedSlot.startTime,
+      endTime: selectedSlot.endTime,
       totalPrice: court.pricePerHour,
-      status: 'confirmed' as const,
+      status: 'pending' as const,
       createdAt: new Date().toISOString().split('T')[0],
     };
     
+    setIsSubmitting(true);
     addBooking(booking);
-    bookSlot(slot.id);
+    bookSlot(selectedSlot.id);
     setConfirmed(true);
-    toast.success('Booking confirmed!');
+    toast.success('Booking request submitted. Waiting for facility owner approval.');
+    setIsSubmitting(false);
   };
 
   if (!venue) return null;
@@ -158,7 +167,7 @@ const BookingPage = () => {
                     {venueCourts.map(c => (
                       <button
                         key={c.id}
-                        onClick={() => { setSelectedCourt(c.id); setSelectedSlot(''); }}
+                        onClick={() => { setSelectedCourt(c.id); setSelectedSlotId(''); }}
                         className={`flex items-center justify-between p-4 rounded-lg border-2 transition-all ${
                           selectedCourt === c.id ? 'border-primary bg-primary/5' : 'border-muted hover:border-primary/30'
                         }`}
@@ -186,7 +195,7 @@ const BookingPage = () => {
                       return (
                         <button
                           key={date}
-                          onClick={() => { setSelectedDate(date); setSelectedSlot(''); }}
+                          onClick={() => { setSelectedDate(date); setSelectedSlotId(''); }}
                           className={`p-3 rounded-lg border-2 text-center transition-all ${
                             selectedDate === date ? 'border-primary bg-primary/5' : 'border-muted hover:border-primary/30'
                           }`}
@@ -216,19 +225,20 @@ const BookingPage = () => {
                           b => b.courtId === selectedCourt && 
                                b.date === selectedDate && 
                                b.startTime === ts.startTime &&
-                               b.status !== 'cancelled'
+                             isOccupiedStatus(b.status)
                         );
+                        const isBlocked = isSlotBlocked(ts.id);
                         return (
                           <button
                             key={ts.id}
-                            disabled={!ts.available || isBooked}
-                            onClick={() => setSelectedSlot(ts.id)}
+                            disabled={!ts.available || isBooked || isBlocked}
+                            onClick={() => setSelectedSlotId(ts.id)}
                             className={`p-3 rounded-lg border-2 text-sm font-medium transition-all ${
-                              !ts.available || isBooked ? 'bg-muted text-muted-foreground cursor-not-allowed opacity-50 border-muted' :
-                              selectedSlot === ts.id ? 'border-primary bg-primary text-primary-foreground' :
+                              !ts.available || isBooked || isBlocked ? 'bg-muted text-muted-foreground cursor-not-allowed opacity-50 border-muted' :
+                              selectedSlotId === ts.id ? 'border-primary bg-primary text-primary-foreground' :
                               'border-muted hover:border-primary/30'
                             }`}
-                            title={isBooked ? 'Already booked' : ''}
+                            title={isBooked ? 'Already booked' : isBlocked ? 'Blocked by facility owner' : ''}
                           >
                             {formatTime(ts.startTime)}
                           </button>
@@ -263,10 +273,10 @@ const BookingPage = () => {
                       <span className="font-medium text-right">{new Date(selectedDate).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}</span>
                     </div>
                   )}
-                  {slot && (
+                  {selectedSlot && (
                     <div className="flex justify-between items-start">
                       <span className="text-muted-foreground">Time</span>
-                      <span className="font-medium text-right">{formatTimeRange(slot.startTime, slot.endTime)} IST</span>
+                      <span className="font-medium text-right">{formatTimeRange(selectedSlot.startTime, selectedSlot.endTime)} IST</span>
                     </div>
                   )}
                   {court && (
@@ -282,10 +292,10 @@ const BookingPage = () => {
                 </div>
                 <Button 
                   className="w-full mt-6 py-6 text-base" 
-                  disabled={!selectedSlot || !venue || !court || !slot} 
+                  disabled={isSubmitting || !selectedSlotId || !venue || !court || !selectedSlot} 
                   onClick={handleConfirm}
                 >
-                  Confirm Booking
+                  {isSubmitting ? 'Confirming...' : 'Confirm Booking'}
                 </Button>
               </CardContent>
             </Card>

@@ -11,6 +11,9 @@ import { useData } from '@/contexts/DataContext';
 import { formatTimeRange } from '@/lib/utils';
 
 const statusColors = {
+  pending: 'bg-amber-50 text-amber-700 border-amber-200',
+  approved: 'bg-success/10 text-success border-success/20',
+  rejected: 'bg-destructive/10 text-destructive border-destructive/20',
   confirmed: 'bg-success/10 text-success border-success/20',
   completed: 'bg-primary/10 text-primary border-primary/20',
   cancelled: 'bg-destructive/10 text-destructive border-destructive/20',
@@ -38,6 +41,9 @@ const MyBookingsPage = () => {
             <SelectTrigger className="w-[160px]"><SelectValue placeholder="Filter" /></SelectTrigger>
             <SelectContent>
               <SelectItem value="all">All Bookings</SelectItem>
+              <SelectItem value="pending">Pending Approval</SelectItem>
+              <SelectItem value="approved">Approved</SelectItem>
+              <SelectItem value="rejected">Rejected</SelectItem>
               <SelectItem value="confirmed">Confirmed</SelectItem>
               <SelectItem value="completed">Completed</SelectItem>
               <SelectItem value="cancelled">Cancelled</SelectItem>
@@ -66,12 +72,12 @@ const MyBookingsPage = () => {
                   </div>
                   <div className="text-right space-y-2">
                     <Badge className={statusColors[booking.status]} variant="outline">
-                      {booking.status === 'confirmed' && <CheckCircle className="h-3 w-3 mr-1" />}
+                      {(booking.status === 'confirmed' || booking.status === 'approved') && <CheckCircle className="h-3 w-3 mr-1" />}
                       {booking.status === 'cancelled' && <XCircle className="h-3 w-3 mr-1" />}
                       {booking.status.charAt(0).toUpperCase() + booking.status.slice(1)}
                     </Badge>
                     <p className="text-xl font-bold text-primary">₹{booking.totalPrice}</p>
-                    {booking.status === 'confirmed' && (
+                    {(booking.status === 'confirmed' || booking.status === 'approved' || booking.status === 'pending') && (
                       <Button variant="outline" size="sm" className="text-destructive" onClick={() => handleCancel(booking.id)}>
                         Cancel
                       </Button>

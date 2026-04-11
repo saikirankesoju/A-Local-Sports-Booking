@@ -5,20 +5,26 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { courts, venues, generateTimeSlots, sports } from '@/data/mockData';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import { toast } from 'sonner';
 import { useAuth } from '@/contexts/AuthContext';
 import { useData } from '@/contexts/DataContext';
 import { useTimeSlots } from '@/contexts/TimeSlotsContext';
+import { useCourts } from '@/contexts/CourtsContext';
+import { useFacility } from '@/contexts/FacilityContext';
 import { formatTime, formatTimeRange } from '@/lib/utils';
+import { generateCourtSlotsForDate } from '@/lib/slots';
+
+const isOccupiedStatus = (status: string) => status !== 'cancelled' && status !== 'rejected';
 
 const QuickBookPage = () => {
   const navigate = useNavigate();
   const { user, isAuthenticated } = useAuth();
   const { addBooking, bookings } = useData();
-  const { bookSlot } = useTimeSlots();
+  const { bookSlot, isSlotBlocked } = useTimeSlots();
+  const { courts } = useCourts();
+  const { venues } = useFacility();
 
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
   const [selectedSport, setSelectedSport] = useState('all');
@@ -45,16 +51,16 @@ const QuickBookPage = () => {
     }
     
     return result;
-  }, [selectedSport, selectedVenue]);
+  }, [courts, selectedSport, selectedVenue]);
 
   const availableVenues = useMemo(() => {
     return venues.filter(v => v.approved && courts.some(c => c.venueId === v.id));
-  }, []);
+  }, [venues, courts]);
 
   const uniqueSports = useMemo(() => {
     const sportSet = new Set(courts.map(c => c.sportType));
     return Array.from(sportSet);
-  }, []);
+  }, [courts]);
 
   const handleDateChange = (days: number) => {
     const newDate = new Date(selectedDate);
@@ -74,12 +80,17 @@ const QuickBookPage = () => {
 
     if (!court || !venue) return;
 
+    if (isSlotBlocked(slotId)) {
+      toast.error('This slot is blocked by facility owner');
+      return;
+    }
+
     // Check if already booked
     const existingBooking = bookings.find(
       b => b.courtId === courtId && 
            b.date === selectedDate && 
            b.startTime === timeSlot.startTime &&
-           b.status !== 'cancelled'
+          isOccupiedStatus(b.status)
     );
 
     if (existingBooking) {
@@ -100,14 +111,14 @@ const QuickBookPage = () => {
       startTime: timeSlot.startTime,
       endTime: timeSlot.endTime,
       totalPrice: court.pricePerHour,
-      status: 'confirmed' as const,
+      status: 'pending' as const,
       createdAt: new Date().toISOString().split('T')[0],
     };
 
     addBooking(newBooking);
     bookSlot(slotId);
     setBookingSlot(null);
-    toast.success(`Court booked successfully for ${timeSlot.startTime}!`);
+    toast.success(`Booking request submitted for ${timeSlot.startTime}. Waiting for owner approval.`);
   };
 
   const dateObj = new Date(selectedDate);
@@ -181,7 +192,7 @@ const QuickBookPage = () => {
           <div className="space-y-6">
             {filteredCourts.map(court => {
               const venue = venues.find(v => v.id === court.venueId);
-              const timeSlots = generateTimeSlots(court.id, selectedDate);
+              const timeSlots = generateCourtSlotsForDate(court, selectedDate);
 
               return (
                 <Card key={court.id}>
@@ -215,23 +226,24 @@ const QuickBookPage = () => {
                           b => b.courtId === court.id && 
                                b.date === selectedDate && 
                                b.startTime === slot.startTime &&
-                               b.status !== 'cancelled'
+                             isOccupiedStatus(b.status)
                         );
                         const isSelected = bookingSlot === slot.id;
+                        const isBlocked = isSlotBlocked(slot.id);
 
                         return (
                           <button
                             key={slot.id}
-                            onClick={() => !isBooked && handleBookSlot(court.id, slot.id, slot)}
-                            disabled={!slot.available || isBooked}
+                            onClick={() => !isBooked && !isBlocked && handleBookSlot(court.id, slot.id, slot)}
+                            disabled={!slot.available || isBooked || isBlocked}
                             className={`p-2 text-sm font-medium rounded-lg border-2 transition-all ${
-                              !slot.available || isBooked
+                              !slot.available || isBooked || isBlocked
                                 ? 'bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed opacity-50'
                                 : isSelected
                                 ? 'bg-primary text-primary-foreground border-primary'
                                 : 'border-muted hover:border-primary/30 hover:bg-muted/50'
                             }`}
-                            title={isBooked ? 'Already booked' : slot.available ? 'Available' : 'Not available'}
+                            title={isBooked ? 'Already booked' : isBlocked ? 'Blocked by facility owner' : slot.available ? 'Available' : 'Not available'}
                           >
                             {formatTime(slot.startTime)}
                           </button>

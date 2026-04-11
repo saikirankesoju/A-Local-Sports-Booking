@@ -31,7 +31,7 @@ const SignupPage = () => {
     if (passwordStrength.score < 3) { toast.error('Please choose a stronger password'); return; }
     const newUser = await signup(email, password, fullName, role);
     if (!newUser) {
-      toast.error('Registration is disabled. Use the predefined accounts.');
+      toast.error('Unable to create account. Please try again.');
       return;
     }
     

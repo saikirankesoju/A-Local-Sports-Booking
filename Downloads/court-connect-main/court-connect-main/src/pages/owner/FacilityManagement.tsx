@@ -19,7 +19,7 @@ const FacilityManagement = () => {
   const { user } = useAuth();
   const { getOwnerVenues, addVenue, updateVenue } = useFacility();
   const { addCourt } = useCourts();
-  const ownerVenues = user ? getOwnerVenues(user.id) : [];
+  const ownerVenues = user ? getOwnerVenues(user.id, user.email) : [];
   const [open, setOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   

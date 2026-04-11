@@ -1,5 +1,6 @@
 import { clsx, type ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
+import type { User } from '@/types';
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
@@ -21,4 +22,12 @@ export function formatTime(time: string) {
 
 export function formatTimeRange(startTime: string, endTime: string) {
   return `${formatTime(startTime)} - ${formatTime(endTime)}`;
+}
+
+export function isOwnedByUser(ownerId: string, user?: Pick<User, 'id' | 'email'> | null) {
+  if (!user) {
+    return false;
+  }
+
+  return ownerId === user.id || ownerId === user.email;
 }

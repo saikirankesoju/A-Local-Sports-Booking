@@ -6,6 +6,7 @@ import Navbar from '@/components/Navbar';
 import OwnerSidebar from '@/components/OwnerSidebar';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line, AreaChart, Area } from 'recharts';
 import { useData } from '@/contexts/DataContext';
+import { isOwnedByUser } from '@/lib/utils';
 
 const weeklyData = [
   { day: 'Mon', bookings: 12 }, { day: 'Tue', bookings: 19 },
@@ -31,7 +32,7 @@ const peakHoursData = [
 const OwnerDashboard = () => {
   const { user } = useAuth();
   const { bookings } = useData();
-  const ownerVenues = venues.filter(v => v.ownerId === user?.id);
+  const ownerVenues = venues.filter(v => isOwnedByUser(v.ownerId, user));
   const ownerCourts = courts.filter(c => ownerVenues.some(v => v.id === c.venueId));
   const totalBookings = bookings.filter(b => ownerVenues.some(v => v.id === b.venueId)).length;
   const totalEarnings = bookings.filter(b => ownerVenues.some(v => v.id === b.venueId) && b.status !== 'cancelled').reduce((s, b) => s + b.totalPrice, 0);

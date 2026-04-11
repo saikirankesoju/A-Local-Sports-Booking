@@ -8,11 +8,50 @@ import OwnerSidebar from '@/components/OwnerSidebar';
 import { Plus, Edit, Trash2 } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Textarea } from '@/components/ui/textarea';
 import { toast } from 'sonner';
 import { useAuth } from '@/contexts/AuthContext';
 import { useFacility } from '@/contexts/FacilityContext';
 import { useCourts } from '@/contexts/CourtsContext';
 import { Court } from '@/types';
+
+function parseCustomSlots(input: string) {
+  const lines = input
+    .split('\n')
+    .map(line => line.trim())
+    .filter(Boolean);
+
+  if (lines.length === 0) {
+    return { slots: [] as Array<{ startTime: string; endTime: string; available: boolean }>, error: null as string | null };
+  }
+
+  const parsed: Array<{ startTime: string; endTime: string; available: boolean }> = [];
+  const seen = new Set<string>();
+
+  for (const line of lines) {
+    const match = line.match(/^(\d{2}:\d{2})\s*-\s*(\d{2}:\d{2})$/);
+    if (!match) {
+      return { slots: [], error: `Invalid slot format: ${line}. Use HH:mm-HH:mm` };
+    }
+
+    const startTime = match[1];
+    const endTime = match[2];
+
+    if (startTime >= endTime) {
+      return { slots: [], error: `Invalid slot range: ${line}` };
+    }
+
+    const key = `${startTime}-${endTime}`;
+    if (seen.has(key)) {
+      continue;
+    }
+    seen.add(key);
+    parsed.push({ startTime, endTime, available: true });
+  }
+
+  parsed.sort((a, b) => a.startTime.localeCompare(b.startTime));
+  return { slots: parsed, error: null as string | null };
+}
 
 const CourtManagement = () => {
   const { user } = useAuth();
@@ -29,10 +68,17 @@ const CourtManagement = () => {
   const [pricePerHour, setPricePerHour] = useState('');
   const [opensAt, setOpensAt] = useState('06:00');
   const [closesAt, setClosesAt] = useState('22:00');
+  const [customSlotsInput, setCustomSlotsInput] = useState('');
 
   const handleAddCourt = () => {
     if (!selectedVenue || !courtName || !sportType || !pricePerHour) {
       toast.error('Please fill in all required fields');
+      return;
+    }
+
+    const { slots, error } = parseCustomSlots(customSlotsInput);
+    if (error) {
+      toast.error(error);
       return;
     }
 
@@ -44,6 +90,7 @@ const CourtManagement = () => {
       pricePerHour: parseInt(pricePerHour),
       operatingHoursStart: opensAt,
       operatingHoursEnd: closesAt,
+      ...(slots.length > 0 ? { slots } : {}),
     };
 
     addCourt(newCourt);
@@ -56,6 +103,7 @@ const CourtManagement = () => {
     setPricePerHour('');
     setOpensAt('06:00');
     setClosesAt('22:00');
+    setCustomSlotsInput('');
     setOpen(false);
   };
 
@@ -135,6 +183,18 @@ const CourtManagement = () => {
                       />
                     </div>
                   </div>
+                  <div>
+                    <Label>Custom Slots (Optional)</Label>
+                    <Textarea
+                      placeholder={'One slot per line, e.g.\n06:00-07:00\n07:30-08:30\n18:00-19:00'}
+                      className="mt-1"
+                      value={customSlotsInput}
+                      onChange={e => setCustomSlotsInput(e.target.value)}
+                    />
+                    <p className="text-xs text-muted-foreground mt-1">
+                      If provided, users can book only these exact slots for this court.
+                    </p>
+                  </div>
                   <Button 
                     className="w-full" 
                     onClick={handleAddCourt}
@@ -163,6 +223,9 @@ const CourtManagement = () => {
                         <h4 className="font-semibold">{court.name}</h4>
                         <p className="text-sm text-muted-foreground">{venue?.name} • {court.sportType}</p>
                         <p className="text-sm text-muted-foreground">{court.operatingHoursStart} - {court.operatingHoursEnd}</p>
+                        {court.slots && court.slots.length > 0 && (
+                          <p className="text-xs text-muted-foreground">Custom slots: {court.slots.length}</p>
+                        )}
                       </div>
                       <div className="flex items-center gap-4">
                         <span className="font-bold text-primary">₹{court.pricePerHour}/hr</span>

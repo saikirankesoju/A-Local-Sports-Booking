@@ -11,6 +11,40 @@ function findDefaultUser(email) {
   return DEFAULT_USERS.find(user => user.email.toLowerCase() === email.toLowerCase()) || null;
 }
 
+async function getOrCreateDefaultUser(defaultUser) {
+  const email = defaultUser.email.toLowerCase();
+  const existing = await User.findOne({ email }).select('+password');
+
+  if (!existing) {
+    return User.create({
+      fullName: defaultUser.fullName,
+      email,
+      password: defaultUser.password,
+      role: defaultUser.role,
+    });
+  }
+
+  let changed = false;
+  if (existing.fullName !== defaultUser.fullName) {
+    existing.fullName = defaultUser.fullName;
+    changed = true;
+  }
+  if (existing.role !== defaultUser.role) {
+    existing.role = defaultUser.role;
+    changed = true;
+  }
+  if (!(await existing.comparePassword(defaultUser.password))) {
+    existing.password = defaultUser.password;
+    changed = true;
+  }
+
+  if (changed) {
+    await existing.save();
+  }
+
+  return existing;
+}
+
 function sanitizeUser(user) {
   return {
     id: user._id,
@@ -29,9 +63,13 @@ export async function register(req, res, next) {
       return res.status(400).json({ message: 'Missing required fields' });
     }
 
+    if (role === 'admin') {
+      return res.status(403).json({ message: 'Admin accounts are system managed' });
+    }
+
     const defaultUser = findDefaultUser(email);
-    if (!defaultUser || defaultUser.password !== password || defaultUser.role !== role || defaultUser.fullName !== fullName) {
-      return res.status(403).json({ message: 'Registration is disabled. Use the predefined accounts.' });
+    if (defaultUser) {
+      return res.status(409).json({ message: 'Email already registered' });
     }
 
     const existing = await User.findOne({ email: email.toLowerCase() });
@@ -56,7 +94,10 @@ export async function login(req, res, next) {
       return res.status(400).json({ message: 'Missing email or password' });
     }
 
-    const user = await User.findOne({ email: email.toLowerCase() }).select('+password');
+    const defaultUser = findDefaultUser(email);
+    const user = defaultUser && defaultUser.password === password
+      ? await getOrCreateDefaultUser(defaultUser)
+      : await User.findOne({ email: email.toLowerCase() }).select('+password');
     if (!user) {
       return res.status(401).json({ message: 'Invalid credentials' });
     }

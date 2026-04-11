@@ -6,6 +6,10 @@ import { generateCourtSlots } from '../services/slotService.js';
 export async function getAvailability(req, res, next) {
   try {
     const { venueId, courtId, date } = req.query;
+    if (!venueId || !courtId || !date) {
+      return res.status(400).json({ message: 'venueId, courtId, and date are required' });
+    }
+
     const venue = await VenueProposal.findById(venueId);
     if (!venue || venue.approvalStatus !== 'approved') {
       return res.status(404).json({ message: 'Approved venue not found' });
@@ -17,10 +21,13 @@ export async function getAvailability(req, res, next) {
     }
 
     const baseSlots = generateCourtSlots(court, date);
-    const bookings = await Booking.find({ venueId, courtId: courtId, date });
+    const bookings = await Booking.find({ venueId, courtId, date, status: { $ne: 'cancelled' } });
 
     const occupied = new Set(bookings.map(booking => booking.startTime));
-    const slots = baseSlots.map(slot => ({ ...slot, available: !occupied.has(slot.startTime) }));
+    const slots = baseSlots.map(slot => ({
+      ...slot,
+      available: Boolean(slot.available) && !occupied.has(slot.startTime),
+    }));
 
     res.json({ slots });
   } catch (err) {
@@ -39,6 +46,29 @@ export async function createBooking(req, res, next) {
     if (!venue || venue.approvalStatus !== 'approved') {
       await session.abortTransaction();
       return res.status(404).json({ message: 'Venue not available for booking' });
+    }
+
+    const court = venue.courts.find(item => item.name === courtId || item._id?.toString() === courtId);
+    if (!court) {
+      await session.abortTransaction();
+      return res.status(404).json({ message: 'Court not found' });
+    }
+
+    const configuredSlots = generateCourtSlots(court, date);
+    const requestedSlot = configuredSlots.find(
+      slot => slot.startTime === startTime && slot.endTime === endTime
+    );
+
+    if (!requestedSlot) {
+      await session.abortTransaction();
+      return res.status(400).json({
+        message: 'Requested time is outside facility owner configured slots',
+      });
+    }
+
+    if (!requestedSlot.available) {
+      await session.abortTransaction();
+      return res.status(403).json({ message: 'Requested slot is blocked by facility owner' });
     }
 
     const existing = await Booking.findOne({ venueId, courtId, date, startTime }).session(session);

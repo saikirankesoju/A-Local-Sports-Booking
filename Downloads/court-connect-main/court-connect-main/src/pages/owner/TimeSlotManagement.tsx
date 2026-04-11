@@ -1,8 +1,7 @@
-import { Clock, Lock, Unlock, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Lock, Unlock, ChevronLeft, ChevronRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { courts, venues, generateTimeSlots } from '@/data/mockData';
 import Navbar from '@/components/Navbar';
 import OwnerSidebar from '@/components/OwnerSidebar';
 import { useState, useMemo, useEffect } from 'react';
@@ -10,19 +9,28 @@ import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { useAuth } from '@/contexts/AuthContext';
 import { useTimeSlots } from '@/contexts/TimeSlotsContext';
-import { formatTime, formatTimeRange } from '@/lib/utils';
+import { useFacility } from '@/contexts/FacilityContext';
+import { useCourts } from '@/contexts/CourtsContext';
+import { useData } from '@/contexts/DataContext';
+import { formatTime } from '@/lib/utils';
+import { generateCourtSlotsForDate } from '@/lib/slots';
+
+const isOccupiedStatus = (status: string) => status !== 'cancelled' && status !== 'rejected';
 
 const TimeSlotManagement = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { getOwnerVenues } = useFacility();
+  const { courts } = useCourts();
+  const { bookings } = useData();
   const { blockSlot, unblockSlot, isSlotBlocked } = useTimeSlots();
-  const ownerVenues = user ? venues.filter(v => v.ownerId === user.id) : [];
+
+  const ownerVenues = user ? getOwnerVenues(user.id, user.email) : [];
   const ownerCourts = courts.filter(c => ownerVenues.some(v => v.id === c.venueId));
-  
+
   const [selectedCourt, setSelectedCourt] = useState<string>('');
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
 
-  // Initialize selected court when owner courts load
   useEffect(() => {
     if (ownerCourts.length > 0 && !selectedCourt) {
       setSelectedCourt(ownerCourts[0].id);
@@ -30,8 +38,10 @@ const TimeSlotManagement = () => {
   }, [ownerCourts, selectedCourt]);
 
   const slots = useMemo(() => {
-    return selectedCourt ? generateTimeSlots(selectedCourt, selectedDate) : [];
-  }, [selectedCourt, selectedDate]);
+    if (!selectedCourt) return [];
+    const court = ownerCourts.find(c => c.id === selectedCourt);
+    return court ? generateCourtSlotsForDate(court, selectedDate) : [];
+  }, [ownerCourts, selectedCourt, selectedDate]);
 
   const handleDateChange = (days: number) => {
     const newDate = new Date(selectedDate);
@@ -76,9 +86,7 @@ const TimeSlotManagement = () => {
             <Card>
               <CardContent className="p-8 text-center">
                 <p className="text-muted-foreground mb-4">No facilities found. Please create a facility first.</p>
-                <Button onClick={() => navigate('/owner/facilities')}>
-                  Create Facility
-                </Button>
+                <Button onClick={() => navigate('/owner/facilities')}>Create Facility</Button>
               </CardContent>
             </Card>
           </main>
@@ -98,9 +106,7 @@ const TimeSlotManagement = () => {
             <Card>
               <CardContent className="p-8 text-center">
                 <p className="text-muted-foreground mb-4">No courts found. Please create a court first.</p>
-                <Button onClick={() => navigate('/owner/courts')}>
-                  Create Court
-                </Button>
+                <Button onClick={() => navigate('/owner/courts')}>Create Court</Button>
               </CardContent>
             </Card>
           </main>
@@ -120,12 +126,16 @@ const TimeSlotManagement = () => {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
             <div>
               <label className="text-sm font-medium mb-2 block">Select Court</label>
-              <Select value={selectedCourt} onValueChange={setSelectedCourt}>
+              <Select value={selectedCourt} onValueChange={value => setSelectedCourt(value)}>
                 <SelectTrigger><SelectValue placeholder="Select court" /></SelectTrigger>
                 <SelectContent>
-                  {ownerCourts.map(c => {
-                    const v = ownerVenues.find(v => v.id === c.venueId);
-                    return <SelectItem key={c.id} value={c.id}>{v?.name} - {c.name}</SelectItem>;
+                  {ownerCourts.map(court => {
+                    const venue = ownerVenues.find(v => v.id === court.venueId);
+                    return (
+                      <SelectItem key={court.id} value={court.id}>
+                        {venue?.name} - {court.name}
+                      </SelectItem>
+                    );
                   })}
                 </SelectContent>
               </Select>
@@ -138,7 +148,9 @@ const TimeSlotManagement = () => {
                   <ChevronLeft className="h-4 w-4" />
                 </Button>
                 <div className="flex-1 text-center p-2 bg-muted rounded-md">
-                  <p className="font-semibold">{dateObj.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}</p>
+                  <p className="font-semibold">
+                    {dateObj.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
+                  </p>
                 </div>
                 <Button variant="outline" size="sm" onClick={() => handleDateChange(1)}>
                   <ChevronRight className="h-4 w-4" />
@@ -161,20 +173,27 @@ const TimeSlotManagement = () => {
                 <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 gap-3">
                   {slots.map(slot => {
                     const slotBlocked = isSlotBlocked(slot.id);
+                    const slotBooked = bookings.some(
+                      booking =>
+                        booking.courtId === selectedCourt &&
+                        booking.date === selectedDate &&
+                        booking.startTime === slot.startTime &&
+                        isOccupiedStatus(booking.status)
+                    );
                     return (
                       <div
                         key={slot.id}
                         className={`p-3 rounded-lg border text-center transition-all ${
                           slotBlocked
                             ? 'bg-destructive/10 border-destructive/20'
-                            : !slot.available
+                            : slotBooked || !slot.available
                               ? 'bg-orange-50 border-orange-200'
                               : 'bg-card hover:border-primary'
                         }`}
                       >
                         <p className="font-medium text-sm">{formatTime(slot.startTime)}</p>
                         <p className="text-xs text-muted-foreground">{formatTime(slot.endTime)}</p>
-                        {!slot.available && !slotBlocked && (
+                        {(slotBooked || !slot.available) && !slotBlocked && (
                           <p className="text-xs font-medium text-orange-600 mt-1">Booked</p>
                         )}
                         <Button
@@ -182,7 +201,7 @@ const TimeSlotManagement = () => {
                           size="sm"
                           className="mt-2 w-full text-xs h-7"
                           onClick={() => toggleBlockSlot(slot.id)}
-                          disabled={!slot.available && !slotBlocked}
+                          disabled={(slotBooked || !slot.available) && !slotBlocked}
                         >
                           {slotBlocked ? (
                             <><Unlock className="h-3 w-3 mr-1" /> Unblock</>

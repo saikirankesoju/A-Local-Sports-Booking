@@ -17,6 +17,15 @@ const USER_STORAGE_KEY = 'quickcourt-auth-user';
 const USERS_STORAGE_KEY = 'quickcourt-registered-users';
 const TOKEN_STORAGE_KEY = 'quickcourt-jwt';
 
+const DEFAULT_LOGIN_USERS = allUsers.map(user => ({
+  id: user.id,
+  email: user.email.toLowerCase(),
+  password: user.password,
+  fullName: user.fullName,
+  role: user.role,
+  avatar: user.avatar,
+}));
+
 const readStoredUser = () => {
   if (typeof window === 'undefined') return currentUser;
 
@@ -94,6 +103,24 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const login = useCallback(async (email: string, password: string) => {
+    const normalizedEmail = email.trim().toLowerCase();
+    const defaultUser = DEFAULT_LOGIN_USERS.find(user => user.email === normalizedEmail && user.password === password);
+
+    if (defaultUser) {
+      const matchedUser: User = {
+        id: defaultUser.id,
+        email: defaultUser.email,
+        fullName: defaultUser.fullName,
+        role: defaultUser.role,
+        avatar: defaultUser.avatar,
+        password: defaultUser.password,
+      };
+
+      persistToken(null);
+      persistUser(matchedUser);
+      return matchedUser;
+    }
+
     try {
       const { api } = await import('@/lib/api');
       const response = await api.auth.login(email, password);
@@ -101,7 +128,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       persistUser(response.user);
       return response.user;
     } catch {
-      const normalizedEmail = email.trim().toLowerCase();
       const existingUser = registeredUsers.find(u => u.email.toLowerCase() === normalizedEmail && u.password === password);
 
       if (existingUser) {

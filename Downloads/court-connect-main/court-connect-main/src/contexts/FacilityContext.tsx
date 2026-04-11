@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, ReactNode } from 'react';
 import { Venue } from '@/types';
 import { venues as initialVenues } from '@/data/mockData';
+import { isOwnedByUser } from '@/lib/utils';
 
 interface FacilityContextType {
   venues: Venue[];
@@ -8,7 +9,7 @@ interface FacilityContextType {
   addVenue: (venue: Venue) => void;
   approveFacility: (venueId: string) => void;
   rejectFacility: (venueId: string) => void;
-  getOwnerVenues: (ownerId: string) => Venue[];
+  getOwnerVenues: (ownerId: string, ownerEmail?: string) => Venue[];
   getPendingVenues: () => Venue[];
   getApprovedVenues: () => Venue[];
 }
@@ -36,8 +37,8 @@ export const FacilityProvider = ({ children }: { children: ReactNode }) => {
     updateVenue(venueId, { approved: false });
   };
 
-  const getOwnerVenues = (ownerId: string) => {
-    return venues.filter(v => v.ownerId === ownerId);
+  const getOwnerVenues = (ownerId: string, ownerEmail?: string) => {
+    return venues.filter(v => v.ownerId === ownerId || v.ownerId === ownerEmail || isOwnedByUser(v.ownerId, { id: ownerId, email: ownerEmail }));
   };
 
   const getPendingVenues = () => {
